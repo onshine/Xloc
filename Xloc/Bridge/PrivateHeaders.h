@@ -21,11 +21,9 @@ typedef NS_ENUM(uint8_t, CLSimulationLocationDeliveryBehavior) {
     CLSimulationDeliveryRoute = 1,   // 沿追加的点顺序播放
 };
 
-/// 私有 Security 接口（SecTask.h 不公开，手动声明）
-CFTypeRef _Nullable SecTaskCreateFromSelf(CFAllocatorRef _Nullable allocator);
-CFTypeRef _Nullable SecTaskCopyValueForEntitlement(CFTypeRef _Nonnull task,
-                                                   CFStringRef _Nonnull entitlement,
-                                                   CFErrorRef _Nullable * _Nullable error);
+/// 检查当前进程是否持有某个 entitlement。
+/// SecTask API 不公开且 CFTypeRef 跨语言导入容易出歧义，这里包成 BOOL。
+BOOL XLHasEntitlement(CFStringRef _Nonnull key);
 
 /// SystemConfiguration 的 SCDynamicStore 在 iOS SDK 里被标为 unavailable，
 /// 实际符号存在。这里通过 dlsym 调用（见 SCDynamicStoreShim.m）。

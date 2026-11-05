@@ -32,10 +32,7 @@ public final class Diagnostics {
     // MARK: - 权限
 
     public static func hasEntitlement(_ key: String) -> Bool {
-        guard let task = SecTaskCreateFromSelf(nil) else { return false }
-        guard let value = SecTaskCopyValueForEntitlement(task, key as CFString, nil) else { return false }
-        if let b = value as? Bool { return b }
-        return true
+        return XLHasEntitlement(key as CFString)
     }
 
     public static func entitlementReport() -> [DiagnosticItem] {

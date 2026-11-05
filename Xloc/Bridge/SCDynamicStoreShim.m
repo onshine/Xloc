@@ -12,6 +12,10 @@
 #import <Foundation/Foundation.h>
 #import <dlfcn.h>
 
+// SecTask.h 属于私有头，手动声明
+extern CFTypeRef SecTaskCreateFromSelf(CFAllocatorRef allocator);
+extern CFTypeRef SecTaskCopyValueForEntitlement(CFTypeRef task, CFStringRef entitlement, CFErrorRef *error);
+
 typedef void *(*XLSCreateFn)(CFAllocatorRef, CFStringRef, void *, void *);
 typedef Boolean (*XLSetFn)(void *, CFStringRef, CFPropertyListRef);
 typedef Boolean (*XLRemoveFn)(void *, CFStringRef);
@@ -62,4 +66,26 @@ BOOL XLSCRemoveValue(CFStringRef key) {
 
 BOOL XLSCAvailable(void) {
     return XLLoadSC();
+}
+
+
+BOOL XLHasEntitlement(CFStringRef key) {
+    static CFTypeRef task = NULL;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        task = SecTaskCreateFromSelf(kCFAllocatorDefault);
+    });
+    if (!task) return NO;
+
+    CFTypeRef value = SecTaskCopyValueForEntitlement(task, key, NULL);
+    if (!value) return NO;
+
+    BOOL granted = YES;
+    if (CFGetTypeID(value) == CFBooleanGetTypeID()) {
+        granted = CFBooleanGetValue((CFBooleanRef)value) ? YES : NO;
+    } else if (CFGetTypeID(value) == CFArrayGetTypeID()) {
+        granted = (CFArrayGetCount((CFArrayRef)value) > 0);
+    }
+    CFRelease(value);
+    return granted;
 }
