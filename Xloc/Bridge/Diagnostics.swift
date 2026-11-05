@@ -70,7 +70,7 @@ public final class Diagnostics {
             }
             if src.isSimulatedBySoftware {
                 return DiagnosticItem("模拟标记",
-                                      "isSimulatedBySoftware = true —— 目标 App 一读就知道是模拟",
+                                      "本 App 收到的样本带模拟标记；这不代表其他 App 的观测结果",
                                       .fail)
             }
             if src.isProducedByAccessory {
@@ -174,8 +174,5 @@ public final class Diagnostics {
                simulationEffective(delivered: location, simulated: simulated),
                wifiConsistency(profile: wifi, target: target)]
             + environmentReport()
-    }
-}
-ort()
     }
 }

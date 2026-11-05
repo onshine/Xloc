@@ -150,6 +150,29 @@ public final class SimulationEngine: ObservableObject {
         state = .idle
     }
 
+    /// 清除模拟位置。任何状态下都可调用：
+    /// 停掉定时器、还原 Wi-Fi、清空 locationd 里的模拟点、回到 idle。
+    /// 保留已选坐标，方便再次模拟。
+    @discardableResult
+    public func clearSimulatedLocation() -> String {
+        timer?.invalidate(); timer = nil
+        if wifiEnabled { wifi.restore() }
+        wifiEnabled = false
+        routeSimulator = nil
+        progress = 0
+        startedAt = nil
+        pausedAt = nil
+        pausedDuration = 0
+        tickCount = 0
+        currentFix = nil
+
+        let ok = bridge.forceClear()
+        state = .idle
+
+        return ok ? "已清除模拟位置"
+                  : "没有可用的模拟接口（缺少 locationd.simulation 权限，或不是通过 TrollStore 安装）"
+    }
+
     /// 摇杆：按方位与距离手动推进
     public func nudge(bearing: Double, meters: Double) {
         guard let base = baseCoordinate else { return }

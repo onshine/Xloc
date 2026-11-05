@@ -22,6 +22,7 @@ struct MapScreen: View {
     @State private var camera: MKCoordinateRegion?
     @State private var hint = "长按地图选点，或搜索地点"
     @State private var mapError: String?
+    @State private var clearMessage: String?
 
     var body: some View {
         ZStack(alignment: .top) {
@@ -63,6 +64,12 @@ struct MapScreen: View {
             ManualCoordinateSheet { coordinate in
                 apply(coordinate, name: "手动坐标")
             }
+        }
+        .alert("已清除", isPresented: Binding(get: { clearMessage != nil },
+                                           set: { if !$0 { clearMessage = nil } })) {
+            Button("好", role: .cancel) { clearMessage = nil }
+        } message: {
+            Text(clearMessage ?? "")
         }
         .alert("提示", isPresented: Binding(get: { showError != nil },
                                           set: { if !$0 { showError = nil } })) {
@@ -170,6 +177,16 @@ struct MapScreen: View {
                 .disabled(picked == nil)
             }
             .font(.footnote)
+
+            Button {
+                clear()
+            } label: {
+                Label("清除模拟位置", systemImage: "xmark.circle")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.bordered)
+            .tint(.red)
+            .font(.footnote)
         }
         .padding(14)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18))
@@ -191,6 +208,12 @@ struct MapScreen: View {
             return
         }
         apply(GeoCoordinate(loc.coordinate), name: "我的位置")
+    }
+
+    private func clear() {
+        let message = engine.clearSimulatedLocation()
+        hint = "已清除模拟位置"
+        clearMessage = message
     }
 
     private func start() {

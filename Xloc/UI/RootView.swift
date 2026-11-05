@@ -93,6 +93,7 @@ struct SettingsScreen: View {
     @ObservedObject private var reporter = CrashReporter.shared
     @State private var diagnostics: [DiagnosticItem] = []
     @State private var uidCopied = false
+    @State private var clearMessage: String?
 
     var body: some View {
         NavigationView {
@@ -198,6 +199,19 @@ struct SettingsScreen: View {
                 }
 
                 Section {
+                    Button {
+                        clearMessage = engine.clearSimulatedLocation()
+                    } label: {
+                        Label("清除模拟位置", systemImage: "xmark.circle")
+                    }
+                    .foregroundStyle(.red)
+                } header: {
+                    Text("模拟")
+                } footer: {
+                    Text("清空 locationd 里的模拟点、还原 Wi-Fi 并停止定时器。App 被系统杀掉后重开，如果定位还停在旧位置，可以用这里清理。")
+                }
+
+                Section {
                     Toggle("同时伪造 Wi-Fi", isOn: $engine.wifiEnabled)
                     Toggle("真正写入系统（危险）", isOn: Binding(
                         get: { WiFiBridge.shared.applyRealChanges },
@@ -234,6 +248,12 @@ struct SettingsScreen: View {
                 }
             }
             .navigationTitle("设置")
+            .alert("已清除", isPresented: Binding(get: { clearMessage != nil },
+                                                 set: { if !$0 { clearMessage = nil } })) {
+                Button("好", role: .cancel) { clearMessage = nil }
+            } message: {
+                Text(clearMessage ?? "")
+            }
         }
     }
 

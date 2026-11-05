@@ -97,6 +97,21 @@ public final class LocSimBridge {
         lastApplyTime = now
     }
 
+    /// 强制清除 locationd 里残留的模拟状态。
+    /// 与 stop() 的区别：不依赖 running 标志，App 重启后也能清掉上一次的残留。
+    @discardableResult
+    public func forceClear() -> Bool {
+        guard let manager else { return false }
+        manager.stopLocationSimulation()
+        manager.clearSimulatedLocations()
+        manager.flush()
+        running = false
+        lastFix = nil
+        lastApplyTime = .distantPast
+        notifyTimezoneUpdate()
+        return true
+    }
+
     public func stop() {
         guard let manager else { return }
         manager.stopLocationSimulation()
