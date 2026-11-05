@@ -26,9 +26,6 @@ struct RootView: View {
                 WiFiScreen()
                     .tabItem { Label("Wi-Fi", systemImage: "wifi") }
 
-                AppScreen()
-                    .tabItem { Label("App", systemImage: "square.stack.3d.up") }
-
                 SettingsScreen()
                     .tabItem { Label("设置", systemImage: "gearshape") }
             }

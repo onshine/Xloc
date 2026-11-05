@@ -28,23 +28,6 @@ targets:
           - "Xloc.entitlements"
           - "Bridge/PrivateHeaders.h"
           - "Bridge/Xloc-Bridging-Header.h"
-    postBuildScripts:
-      - name: Build XlocPlugin.dylib
-        basedOnDependencyAnalysis: false
-        script: |
-          set -e
-          DST="${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}"
-          mkdir -p "$DST"
-          xcrun --sdk iphoneos clang \
-            -arch arm64 \
-            -miphoneos-version-min=15.0 \
-            -dynamiclib -fobjc-arc -fmodules -O2 \
-            -isysroot "$(xcrun --sdk iphoneos --show-sdk-path)" \
-            -framework Foundation -framework CoreLocation -framework UIKit \
-            -install_name "@executable_path/XlocPlugin.dylib" \
-            "${SRCROOT}/XlocPlugin/XlocPlugin.m" \
-            -o "${DST}/XlocPlugin.dylib"
-          echo "built XlocPlugin.dylib: $(ls -l "${DST}/XlocPlugin.dylib")"
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.onshine.xloc
@@ -54,7 +37,7 @@ targets:
         SWIFT_OBJC_BRIDGING_HEADER: Xloc/Bridge/Xloc-Bridging-Header.h
         OTHER_LDFLAGS: "-framework CoreLocation -framework SystemConfiguration -framework MapKit -framework Security"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-        MARKETING_VERSION: "0.2.0"
+        MARKETING_VERSION: "0.2.1"
         CURRENT_PROJECT_VERSION: "1"
 
   XlocTests:

@@ -66,7 +66,7 @@ public final class Diagnostics {
         }
         if #available(iOS 15.0, *) {
             guard let src = loc.sourceInformation else {
-                return DiagnosticItem("模拟标记", "sourceInformation 为 nil（通常是真实定位）", .ok)
+                return DiagnosticItem("模拟标记", "sourceInformation 为 nil：缺少来源信息，不等于 false，也不证明真实定位", .info)
             }
             if src.isSimulatedBySoftware {
                 return DiagnosticItem("模拟标记",
@@ -174,5 +174,8 @@ public final class Diagnostics {
                simulationEffective(delivered: location, simulated: simulated),
                wifiConsistency(profile: wifi, target: target)]
             + environmentReport()
+    }
+}
+ort()
     }
 }

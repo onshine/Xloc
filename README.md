@@ -214,17 +214,15 @@ Xloc 提供：
 
 ---
 
-## 两种模式
+## 当前模式与未验证的方案
 
-| | 系统通道 | 单 App 注入 |
-|---|---|---|
-| 入口 | 地图 / 路线页 | App 标签页 |
-| 生效范围 | 全设备 | 只对选中的那个 App |
-| `isSimulatedBySoftware` | **true** | **nil（等同真实定位）** |
-| 换坐标 | 实时 | 需重新生成安装包 |
-| 风险 | 低 | 会覆盖目标 App，需 TrollStore 重装 |
+地图 / 路线页仍使用系统模拟通道。本机实测样本的 `isSimulatedBySoftware` 为 `true`；现有版本没有实现隐藏模拟来源。
 
-注入模式的细节见 [Docs/INJECTION.md](Docs/INJECTION.md)。
+v0.2.0 的改包安装入口未经过真实目标验证。安装日志已确认：主程序仍有 FairPlay 加密时，TrollStore 拒绝该安装路径并返回 180。当前本地代码已撤下该入口，不应继续把它当作可用功能。
+
+`sourceInformation == nil` 仅表示没有来源信息，不等同于 `isSimulatedBySoftware == false`，更不证明定位真实或无法被检测。本 App 的诊断也不能证明另一个 App 的观测结果。
+
+详见 [方案纠错记录](Docs/INJECTION.md)。
 
 ## 自检面板
 
