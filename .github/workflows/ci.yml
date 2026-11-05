@@ -1,0 +1,138 @@
+name: CI
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ─────────────────────────────────────────────
+  # 1. 真机架构构建 + 打包 tipa（不签名，仅验证能编过）
+  # ─────────────────────────────────────────────
+  build:
+    name: Build (iphoneos)
+    runs-on: macos-14
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Show toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate project
+        run: xcodegen generate
+
+      - name: Build for device
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project Xloc.xcodeproj \
+            -scheme Xloc \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            build
+
+      - name: Locate .app
+        id: app
+        run: |
+          APP=$(find build/Build/Products/Release-iphoneos -maxdepth 1 -name '*.app' | head -1)
+          echo "path=$APP" >> "$GITHUB_OUTPUT"
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist"
+
+      - name: Package tipa (unsigned, 仅作构建产物)
+        run: |
+          mkdir -p out
+          ./Scripts/package.sh "${{ steps.app.outputs.path }}" out/Xloc-unsigned.tipa --no-sign
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Xloc-unsigned
+          path: out/Xloc-unsigned.tipa
+          retention-days: 7
+
+  # ─────────────────────────────────────────────
+  # 2. 单元测试（模拟器）
+  # ─────────────────────────────────────────────
+  test:
+    name: Test (simulator)
+    runs-on: macos-14
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate project
+        run: xcodegen generate
+
+      - name: Pick an available iPhone simulator
+        id: sim
+        run: |
+          xcrun simctl list devices available -j > /tmp/sims.json
+          NAME=$(python3 - /tmp/sims.json <<'PY'
+          import json, sys, re
+          data = json.load(open(sys.argv[1]))["devices"]
+          best = None
+          for runtime, devs in data.items():
+              if "iOS" not in runtime:
+                  continue
+              for dev in devs:
+                  name = dev.get("name", "")
+                  if not name.startswith("iPhone"):
+                      continue
+                  m = re.search(r"iPhone (\d+)", name)
+                  score = int(m.group(1)) if m else 0
+                  if best is None or score > best[0]:
+                      best = (score, name)
+          print(best[1] if best else "")
+          PY
+          )
+          if [ -z "$NAME" ]; then
+            echo "::error::没有可用的 iPhone 模拟器"
+            exit 1
+          fi
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+          echo "使用模拟器: $NAME"
+
+      - name: Run tests
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -project Xloc.xcodeproj \
+            -scheme Xloc \
+            -destination "platform=iOS Simulator,name=${{ steps.sim.outputs.name }}" \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            | tail -40
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-logs
+          path: build/Logs/Test/*.xcresult
+          if-no-files-found: ignore
+          retention-days: 7

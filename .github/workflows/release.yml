@@ -1,0 +1,144 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '版本号（例如 v0.1.0）'
+        required: true
+        default: 'v0.1.0'
+      prerelease:
+        description: '标记为预发布'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build & Publish
+    runs-on: macos-14
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0        # 生成 changelog 需要完整历史
+
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Resolve version
+        id: ver
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            V="${{ github.event.inputs.version }}"
+          else
+            V="${GITHUB_REF_NAME}"
+          fi
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+          echo "plain=${V#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Install tools
+        run: |
+          brew install xcodegen
+          # ldid 不是每个 tap 都有；没有就回退到 codesign（同样能写入 entitlements）
+          brew install ldid 2>/dev/null || echo "::warning::ldid 不可用，将使用 codesign 进行 ad-hoc 签名"
+          command -v ldid && ldid -v || true
+
+      - name: Generate project
+        run: xcodegen generate
+
+      - name: Build
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project Xloc.xcodeproj \
+            -scheme Xloc \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build \
+            MARKETING_VERSION="${{ steps.ver.outputs.plain }}" \
+            CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            build
+
+      - name: Locate app
+        id: app
+        run: |
+          APP=$(find build/Build/Products/Release-iphoneos -maxdepth 1 -name '*.app' | head -1)
+          [ -n "$APP" ] || { echo "找不到 .app"; exit 1; }
+          echo "path=$APP" >> "$GITHUB_OUTPUT"
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist"
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Info.plist"
+
+      - name: Sign & package
+        run: |
+          mkdir -p dist
+          ./Scripts/package.sh "${{ steps.app.outputs.path }}" "dist/Xloc-${{ steps.ver.outputs.plain }}.tipa"
+
+      - name: Verify entitlements
+        run: |
+          BIN="${{ steps.app.outputs.path }}/$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "${{ steps.app.outputs.path }}/Info.plist")"
+          echo "== 签名信息 =="
+          codesign -dvvv "$BIN" 2>&1 | sed -n '1,12p' || true
+          echo "== entitlements =="
+          codesign -d --entitlements :- "$BIN" 2>/dev/null | tee /tmp/ent.plist || true
+          grep -q "com.apple.locationd.simulation" /tmp/ent.plist \
+            || { echo "::error::entitlements 里没有 locationd.simulation，安装后无法模拟定位"; exit 1; }
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          PREV=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          if [ -n "$PREV" ]; then
+            RANGE="$PREV..HEAD"
+            TITLE="自 $PREV 以来的变更"
+          else
+            RANGE="HEAD"
+            TITLE="首个版本"
+          fi
+          {
+            echo "## $TITLE"
+            echo
+            git log --pretty=format:'- %s (%h)' $RANGE | head -60
+            echo
+            echo
+            echo "### 安装"
+            echo
+            echo "1. 下载 \`Xloc-${{ steps.ver.outputs.plain }}.tipa\`"
+            echo "2. 用 TrollStore 打开并安装"
+            echo "3. 首次启动如提示缺少权限，请确认是通过 TrollStore 安装（需要 fakesign 写入 entitlements）"
+            echo
+            echo "### 校验"
+            echo
+            echo '```'
+            cat dist/*.sha256 2>/dev/null || true
+            echo '```'
+          } > release-notes.md
+          cat release-notes.md
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.ver.outputs.version }}
+          name: Xloc ${{ steps.ver.outputs.version }}
+          body_path: release-notes.md
+          prerelease: ${{ github.event.inputs.prerelease == 'true' }}
+          fail_on_unmatched_files: true
+          files: |
+            dist/Xloc-${{ steps.ver.outputs.plain }}.tipa
+            dist/Xloc-${{ steps.ver.outputs.plain }}.tipa.sha256
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Xloc-${{ steps.ver.outputs.plain }}
+          path: dist/*
+          retention-days: 30

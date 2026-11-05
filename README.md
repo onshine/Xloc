@@ -4,6 +4,7 @@
 
 **一个开源的 iOS 定位模拟工具 — 追求"真实"，而不只是"能改"**
 
+[![CI](https://github.com/onshine/Xloc/actions/workflows/ci.yml/badge.svg)](https://github.com/onshine/Xloc/actions/workflows/ci.yml)
 [![Platform](https://img.shields.io/badge/iOS-15.0%2B-black?style=flat-square&logo=apple)](https://github.com/onshine/Xloc)
 [![TrollStore](https://img.shields.io/badge/Requires-TrollStore-purple?style=flat-square)](https://github.com/opa334/TrollStore)
 [![License](https://img.shields.io/badge/License-GPL--3.0-blue?style=flat-square)](LICENSE)
@@ -93,6 +94,16 @@ make tipa        # 生成 Xloc.tipa
 `make tipa` 会依次：生成 Xcode 工程 → `xcodebuild` → 用 `ldid` 把 [Xloc.entitlements](Xloc/Xloc.entitlements) 签进主程序 → 打包成 `Payload/Xloc.app`。
 
 然后 AirDrop / 文件 App 把 `Xloc.tipa` 丢给 TrollStore 安装即可。
+
+### 自动发布
+
+```bash
+git tag v0.1.0 && git push origin v0.1.0
+```
+
+GitHub Actions 会自动构建、写入 entitlements、**校验 `locationd.simulation` 确实签进去了**、
+生成 changelog 并把 `.tipa` + `.sha256` 挂到 Release。
+细节见 [Docs/RELEASING.md](Docs/RELEASING.md)。
 
 ### 直接改工程
 
@@ -241,6 +252,7 @@ Xloc 提供：
 - [检测向量与对策](Docs/DETECTION.md)
 - [Andromeda 分析](Docs/ANALYSIS-ANDROMEDA.md)
 - [路线图](Docs/ROADMAP.md)
+- [发布流程](Docs/RELEASING.md)
 
 ---
 
