@@ -128,8 +128,8 @@ struct RouteScreen: View {
         busy = true
         status = "正在算路…"
         let req = MKDirections.Request()
-        req.source = MKMapItem(placemark: MKPlacemark(coordinate: s.clCoordinate))
-        req.destination = MKMapItem(placemark: MKPlacemark(coordinate: e.clCoordinate))
+        req.source = MKMapItem(placemark: MKPlacemark(coordinate: CoordinateTransform.wgs84ToGcj02(s).clCoordinate))
+        req.destination = MKMapItem(placemark: MKPlacemark(coordinate: CoordinateTransform.wgs84ToGcj02(e).clCoordinate))
         req.transportType = mode.mapKitTransport
         req.requestsAlternateRoutes = false
 
@@ -206,8 +206,9 @@ struct RouteMapView: UIViewRepresentable {
 
         @objc func press(_ g: UILongPressGestureRecognizer) {
             guard g.state == .began, let map else { return }
-            let c = GeoCoordinate(map.convert(g.location(in: map), toCoordinateFrom: map))
-            if parent.picking == .start { parent.start = c } else { parent.end = c }
+            let gcj = GeoCoordinate(map.convert(g.location(in: map), toCoordinateFrom: map))
+            let wgs = CoordinateTransform.gcj02ToWgs84(gcj)
+            if parent.picking == .start { parent.start = wgs } else { parent.end = wgs }
         }
 
         func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
@@ -230,17 +231,17 @@ struct RouteMapView: UIViewRepresentable {
                 if startPin == nil {
                     startPin = MKPointAnnotation(); startPin?.title = "起点"; map.addAnnotation(startPin!)
                 }
-                startPin?.coordinate = s.clCoordinate
+                startPin?.coordinate = CoordinateTransform.wgs84ToGcj02(s).clCoordinate
             }
             if let e = end {
                 if endPin == nil {
                     endPin = MKPointAnnotation(); endPin?.title = "终点"; map.addAnnotation(endPin!)
                 }
-                endPin?.coordinate = e.clCoordinate
+                endPin?.coordinate = CoordinateTransform.wgs84ToGcj02(e).clCoordinate
             }
             if let old = line { map.removeOverlay(old); line = nil }
             if let p = path, p.points.count > 1 {
-                var coords = p.points.map { $0.clCoordinate }
+                var coords = p.points.map { CoordinateTransform.wgs84ToGcj02($0).clCoordinate }
                 let poly = MKPolyline(coordinates: &coords, count: coords.count)
                 map.addOverlay(poly, level: .aboveRoads)
                 line = poly

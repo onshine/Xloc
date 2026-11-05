@@ -1,31 +1,39 @@
 // Xloc — RootView.swift
 
 import SwiftUI
+import CoreLocation
 
 struct RootView: View {
     @EnvironmentObject var engine: SimulationEngine
 
     var body: some View {
-        TabView {
-            MapScreen()
-                .tabItem { Label("地图", systemImage: "map") }
+        VStack(spacing: 0) {
+            if engine.state != .idle {
+                StatusBanner()
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 6)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            }
 
-            RouteScreen()
-                .tabItem { Label("路线", systemImage: "point.topleft.down.curvedto.point.bottomright.up") }
+            TabView {
+                MapScreen()
+                    .tabItem { Label("地图", systemImage: "map") }
 
-            WiFiScreen()
-                .tabItem { Label("Wi-Fi", systemImage: "wifi") }
+                RouteScreen()
+                    .tabItem { Label("路线", systemImage: "point.topleft.down.curvedto.point.bottomright.up") }
 
-            SettingsScreen()
-                .tabItem { Label("设置", systemImage: "gearshape") }
+                WiFiScreen()
+                    .tabItem { Label("Wi-Fi", systemImage: "wifi") }
+
+                SettingsScreen()
+                    .tabItem { Label("设置", systemImage: "gearshape") }
+            }
         }
-        .overlay(alignment: .top) {
-            StatusBanner()
-        }
+        .animation(.easeInOut(duration: 0.2), value: engine.state)
     }
 }
 
-// MARK: - 顶部状态条
+// MARK: - 状态条
 
 struct StatusBanner: View {
     @EnvironmentObject var engine: SimulationEngine
@@ -44,25 +52,25 @@ struct StatusBanner: View {
             Circle().fill(color).frame(width: 8, height: 8)
             Text(statusText).font(.caption.weight(.medium))
             if engine.state == .running {
-                Text(String(format: "%.1f m", engine.currentFix?.horizontalAccuracy ?? 0))
+                Text(String(format: "±%.0f m", engine.currentFix?.horizontalAccuracy ?? 0))
                     .font(.caption2.monospacedDigit())
                     .foregroundStyle(.secondary)
             }
             Spacer()
-            if engine.state == .running || engine.state == .paused {
-                Button(engine.state == .paused ? "继续" : "暂停") {
-                    if engine.state == .paused { engine.resume() } else { engine.pause() }
-                }
-                .font(.caption.weight(.semibold))
-                Button("停止") { engine.stop() }
+            if engine.state == .paused {
+                Button("继续") { engine.resume() }
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(.red)
+            } else if engine.state == .running {
+                Button("暂停") { engine.pause() }
+                    .font(.caption.weight(.semibold))
             }
+            Button("停止") { engine.stop() }
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.red)
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 8)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 7)
         .background(.ultraThinMaterial, in: Capsule())
-        .padding(.top, 6)
     }
 
     private var statusText: String {
@@ -79,11 +87,38 @@ struct StatusBanner: View {
 
 struct SettingsScreen: View {
     @EnvironmentObject var engine: SimulationEngine
+    @EnvironmentObject var locationAuth: LocationAuthorizer
+
     @State private var diagnostics: [DiagnosticItem] = []
 
     var body: some View {
         NavigationView {
             Form {
+                Section {
+                    if let loc = locationAuth.lastLocation {
+                        row("坐标", String(format: "%.6f, %.6f", loc.coordinate.latitude, loc.coordinate.longitude))
+                        row("精度", String(format: "±%.1f m", loc.horizontalAccuracy))
+                        row("海拔", String(format: "%.1f m", loc.altitude))
+                        if #available(iOS 15.0, *) {
+                            if let src = loc.sourceInformation {
+                                row("来源", src.isSimulatedBySoftware ? "软件模拟" :
+                                    (src.isProducedByAccessory ? "外接设备" : "系统定位"))
+                            } else {
+                                row("来源", "系统定位")
+                            }
+                        }
+                    } else {
+                        Text(locationAuth.lastError ?? "还没有拿到定位样本")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Button("刷新定位") { locationAuth.refresh() }
+                } header: {
+                    Text("系统当前交付的定位")
+                } footer: {
+                    Text("这里显示的是 CoreLocation 实际交给本 App 的定位。开启模拟后，它会变成模拟值——正好用来判断模拟有没有生效。")
+                }
+
                 Section("真实感") {
                     Toggle("启用真实感引擎", isOn: $engine.realism.enabled)
 
@@ -122,13 +157,15 @@ struct SettingsScreen: View {
                     }
                 }
 
-                Section("Wi-Fi 指纹") {
+                Section {
                     Toggle("同时伪造 Wi-Fi", isOn: $engine.wifiEnabled)
                     Toggle("真正写入系统（危险）", isOn: Binding(
                         get: { WiFiBridge.shared.applyRealChanges },
                         set: { WiFiBridge.shared.applyRealChanges = $0 }))
                     Text("关闭时只做 dry-run，不会改动系统配置。开启后停止模拟会自动还原。")
                         .font(.caption).foregroundStyle(.secondary)
+                } header: {
+                    Text("Wi-Fi 指纹")
                 }
 
                 Section {
@@ -146,11 +183,11 @@ struct SettingsScreen: View {
                 } header: {
                     Text("自检")
                 } footer: {
-                    Text("自检只读，不会修改任何系统状态。")
+                    Text("自检只读，不会修改任何系统状态。VPN / 代理那几项是提示，不是错误。")
                 }
 
                 Section("关于") {
-                    HStack { Text("版本"); Spacer(); Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "-").foregroundStyle(.secondary) }
+                    row("版本", Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "-")
                     Link("项目主页", destination: URL(string: "https://github.com/onshine/Xloc")!)
                     Text("GPL-3.0 · 仅供学习与测试使用")
                         .font(.caption).foregroundStyle(.secondary)
@@ -160,10 +197,20 @@ struct SettingsScreen: View {
         }
     }
 
+    private func row(_ title: String, _ value: String) -> some View {
+        HStack {
+            Text(title)
+            Spacer()
+            Text(value).foregroundStyle(.secondary)
+        }
+    }
+
     private func runDiagnostics() {
-        diagnostics = Diagnostics.fullReport(location: nil,
+        locationAuth.refresh()
+        diagnostics = Diagnostics.fullReport(location: locationAuth.lastLocation,
                                              wifi: engine.wifiProfile,
-                                             target: engine.baseCoordinate)
+                                             target: engine.baseCoordinate,
+                                             simulated: engine.state == .idle ? nil : engine.currentFix?.coordinate)
     }
 
     private func label(for env: LocationEnvironment) -> String {

@@ -99,8 +99,10 @@ public final class Diagnostics {
             let httpOn = proxy["HTTPEnable"] as? Int ?? 0
             let httpsOn = proxy["HTTPSEnable"] as? Int ?? 0
             out.append(DiagnosticItem("系统代理",
-                                      (httpOn == 1 || httpsOn == 1) ? "已开启（可能被风控关注）" : "未开启",
-                                      (httpOn == 1 || httpsOn == 1) ? .warn : .ok))
+                                      (httpOn == 1 || httpsOn == 1)
+                                        ? "已开启（若目标 App 校验出口 IP，需保证出口与坐标一致）"
+                                        : "未开启",
+                                      .info))
         }
 
         // VPN / utun
@@ -115,8 +117,10 @@ public final class Diagnostics {
             }
             freeifaddrs(ifaddr)
         }
-        out.append(DiagnosticItem("VPN 接口", vpn ? "存在 utun/ppp（出口 IP 可能不符）" : "未发现",
-                                  vpn ? .warn : .ok))
+        out.append(DiagnosticItem("VPN 接口",
+                                  vpn ? "存在 utun/ppp —— 只是提示，若目标 App 比对出口 IP，需要代理出口与坐标一致"
+                                      : "未发现",
+                                  .info))
 
         // 时区一致性（简单版：设备时区 vs 坐标所在经度）
         out.append(DiagnosticItem("时区同步",
@@ -142,11 +146,33 @@ public final class Diagnostics {
         return DiagnosticItem("Wi-Fi 一致性", "SSID/BSSID 已设置（OUI 未知厂商）", .warn)
     }
 
+    /// 判断模拟到底有没有生效：把"系统交付的定位"和"我们设定的目标"比一下。
+    public static func simulationEffective(delivered: CLLocation?,
+                                           simulated: GeoCoordinate?) -> DiagnosticItem {
+        guard let simulated else {
+            return DiagnosticItem("模拟生效", "当前没有在模拟", .info)
+        }
+        guard let d = delivered else {
+            return DiagnosticItem("模拟生效", "模拟已开启，但还没收到系统交付的定位样本", .warn)
+        }
+        let dist = GeoMath.distance(GeoCoordinate(d.coordinate), simulated)
+        if dist < 200 {
+            return DiagnosticItem("模拟生效",
+                                  String(format: "系统交付的定位与目标相差 %.0f m", dist), .ok)
+        }
+        return DiagnosticItem("模拟生效",
+                              String(format: "系统交付的定位与目标相差 %.0f km —— 模拟没有生效",
+                                     dist / 1000), .fail)
+    }
+
     public static func fullReport(location: CLLocation?,
                                   wifi: WiFiProfile?,
-                                  target: GeoCoordinate?) -> [DiagnosticItem] {
+                                  target: GeoCoordinate?,
+                                  simulated: GeoCoordinate? = nil) -> [DiagnosticItem] {
         entitlementReport()
-            + [checkDeliveredLocation(location), wifiConsistency(profile: wifi, target: target)]
+            + [checkDeliveredLocation(location),
+               simulationEffective(delivered: location, simulated: simulated),
+               wifiConsistency(profile: wifi, target: target)]
             + environmentReport()
     }
 }
