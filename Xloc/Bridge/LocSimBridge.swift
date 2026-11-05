@@ -62,7 +62,8 @@ public final class LocSimBridge {
 
         manager.stopLocationSimulation()
         manager.clearSimulatedLocations()
-        manager.locationDeliveryBehavior = UInt8(CLSimulationDeliveryFixed.rawValue)
+        // 0 = 固定点，1 = 按 append 顺序播放（见 PrivateHeaders.h）
+        manager.locationDeliveryBehavior = 0
         manager.appendSimulatedLocation(makeCLLocation(fix))
         manager.flush()
         manager.startLocationSimulation()
@@ -130,7 +131,8 @@ public final class LocSimBridge {
         guard let manager, !fixes.isEmpty else { throw LocSimError.unavailable }
         manager.stopLocationSimulation()
         manager.clearSimulatedLocations()
-        manager.locationDeliveryBehavior = UInt8(CLSimulationDeliveryRoute.rawValue)
+        // 1 = 按 append 顺序播放
+        manager.locationDeliveryBehavior = 1
         manager.locationSpeed = max(0.1, speed)
         manager.locationInterval = max(0.1, interval)
         manager.locationRepeatBehavior = 0
