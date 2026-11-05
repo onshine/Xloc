@@ -221,11 +221,6 @@ struct MapCanvas: UIViewRepresentable {
         map.pointOfInterestFilter = .excludingAll
         map.isRotateEnabled = false
         map.isPitchEnabled = false
-        map.setRegion(MKCoordinateRegion(center: CLLocationCoordinate2D(latitude: 31.2304,
-                                                                       longitude: 121.4737),
-                                         span: MKCoordinateSpan(latitudeDelta: 12,
-                                                                longitudeDelta: 12)),
-                      animated: false)
 
         let press = UILongPressGestureRecognizer(target: context.coordinator,
                                                  action: #selector(Coordinator.onLongPress(_:)))
@@ -237,6 +232,16 @@ struct MapCanvas: UIViewRepresentable {
     }
 
     func updateUIView(_ map: MKMapView, context: Context) {
+        // 首次布局完成（bounds 非 0）后再设区域：在 makeUIView 里设会得到无效 region，
+        // 表现就是"地图一片空白，要手动拖一下才出来"。
+        if !context.coordinator.didSetInitialRegion, map.bounds.width > 1 {
+            context.coordinator.didSetInitialRegion = true
+            map.setRegion(MKCoordinateRegion(center: CLLocationCoordinate2D(latitude: 31.2304,
+                                                                           longitude: 121.4737),
+                                             span: MKCoordinateSpan(latitudeDelta: 8,
+                                                                    longitudeDelta: 8)),
+                          animated: false)
+        }
         context.coordinator.applyCamera(camera, on: map)
         context.coordinator.applyAnnotation(coordinate, on: map)
     }
@@ -248,6 +253,8 @@ struct MapCanvas: UIViewRepresentable {
         weak var map: MKMapView?
         private var pin: MKPointAnnotation?
         private var lastCameraKey = ""
+        var didSetInitialRegion = false
+        private var hasLoadedOnce = false
 
         init(_ parent: MapCanvas) { self.parent = parent }
 
@@ -282,10 +289,13 @@ struct MapCanvas: UIViewRepresentable {
 
         // 瓦片加载状态：让"空白"变成一条能看懂的提示
         func mapViewDidFinishLoadingMap(_ mapView: MKMapView) {
+            hasLoadedOnce = true
             DispatchQueue.main.async { self.parent.loadError = nil }
         }
 
         func mapViewDidFailLoadingMap(_ mapView: MKMapView, withError error: Error) {
+            // 只有"从来没成功加载过"才提示，避免缩放时抖动误报
+            guard !hasLoadedOnce else { return }
             DispatchQueue.main.async {
                 self.parent.loadError = error.localizedDescription
             }
