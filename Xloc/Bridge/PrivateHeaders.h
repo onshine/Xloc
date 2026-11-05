@@ -22,8 +22,17 @@ typedef NS_ENUM(uint8_t, CLSimulationLocationDeliveryBehavior) {
 };
 
 /// 私有 Security 接口（SecTask.h 不公开，手动声明）
-CFTypeRef SecTaskCreateFromSelf(CFAllocatorRef allocator);
-CFTypeRef SecTaskCopyValueForEntitlement(CFTypeRef task, CFStringRef entitlement, CFErrorRef *error);
+CFTypeRef _Nullable SecTaskCreateFromSelf(CFAllocatorRef _Nullable allocator);
+CFTypeRef _Nullable SecTaskCopyValueForEntitlement(CFTypeRef _Nonnull task,
+                                                   CFStringRef _Nonnull entitlement,
+                                                   CFErrorRef _Nullable * _Nullable error);
+
+/// SystemConfiguration 的 SCDynamicStore 在 iOS SDK 里被标为 unavailable，
+/// 实际符号存在。这里通过 dlsym 调用（见 SCDynamicStoreShim.m）。
+/// 返回值 false 表示符号不可用或写入失败。
+BOOL XLSCSetValue(CFStringRef _Nonnull key, CFPropertyListRef _Nonnull value);
+BOOL XLSCRemoveValue(CFStringRef _Nonnull key);
+BOOL XLSCAvailable(void);
 
 @interface CLSimulationManager : NSObject
 

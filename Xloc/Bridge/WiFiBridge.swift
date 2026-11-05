@@ -111,7 +111,6 @@ public final class WiFiBridge {
     private let wifiPlistPath = "/private/var/preferences/SystemConfiguration/com.apple.wifi.plist"
     private var backupPath: String?
     private var applied = false
-    private var dynamicStore: SCDynamicStore?
 
     public private(set) var currentProfile: WiFiProfile?
 
@@ -186,9 +185,7 @@ public final class WiFiBridge {
             try? FileManager.default.removeItem(atPath: wifiPlistPath)
             try? FileManager.default.copyItem(atPath: backup, toPath: wifiPlistPath)
         }
-        if let store = dynamicStore {
-            SCDynamicStoreRemoveValue(store, "State:/Network/Interface/en0/AirPort" as CFString)
-        }
+        _ = XLSCRemoveValue("State:/Network/Interface/en0/AirPort" as CFString)
         applied = false
         backupPath = nil
     }
@@ -196,11 +193,7 @@ public final class WiFiBridge {
     // MARK: 实现
 
     private func applyViaDynamicStore(_ p: WiFiProfile) -> Bool {
-        if dynamicStore == nil {
-            var ctx = SCDynamicStoreContext(version: 0, info: nil, retain: nil, release: nil, copyDescription: nil)
-            dynamicStore = SCDynamicStoreCreate(nil, "Xloc" as CFString, nil, &ctx)
-        }
-        guard let store = dynamicStore else { return false }
+        guard XLSCAvailable() else { return false }
 
         let payload: [String: Any] = [
             "SSID": Data(p.ssid.utf8),
@@ -211,10 +204,8 @@ public final class WiFiBridge {
             "SecurityType": p.security,
             "Hidden": p.isHidden
         ]
-        let ok = SCDynamicStoreSetValue(store, "State:/Network/Interface/en0/AirPort" as CFString,
-                                        payload as CFDictionary)
-        if ok { SCDynamicStoreNotifyValue(store, "State:/Network/Interface/en0/AirPort" as CFString) }
-        return ok
+        return XLSCSetValue("State:/Network/Interface/en0/AirPort" as CFString,
+                            payload as CFDictionary)
     }
 
     private func applyViaPlist(_ p: WiFiProfile) -> Bool {
