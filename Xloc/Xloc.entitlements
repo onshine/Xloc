@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- ===== 必需 ===== -->
+	<!-- TrollStore 平台应用：允许加载私有框架、绕过部分平台限制 -->
+	<key>platform-application</key>
+	<true/>
+
+	<!-- 定位模拟核心：CLSimulationManager → locationd -->
+	<key>com.apple.locationd.simulation</key>
+	<true/>
+
+	<!-- 访问 SystemConfiguration（Wi-Fi 指纹） -->
+	<key>com.apple.private.security.no-sandbox</key>
+	<true/>
+	<key>com.apple.SystemConfiguration.SCDynamicStore-write-access</key>
+	<true/>
+
+	<!-- ===== 按需 ===== -->
+	<!-- 读取当前连接的 Wi-Fi（CNCopyCurrentNetworkInfo） -->
+	<key>com.apple.developer.networking.wifi-info</key>
+	<true/>
+
+	<!-- 读取已安装 App 列表（按 App 配置预设，非注入） -->
+	<key>com.apple.private.coreservices.canmaplsdatabase</key>
+	<true/>
+
+	<!-- 只允许写 SystemConfiguration 目录，而不是像某些项目那样给整个 "/" -->
+	<key>com.apple.security.exception.files.absolute-path.read-write</key>
+	<array>
+		<string>/private/var/preferences/SystemConfiguration/</string>
+		<string>/private/var/mobile/Library/Preferences/</string>
+	</array>
+
+	<!-- 容器管理（保存收藏/配置到共享容器） -->
+	<key>com.apple.private.security.container-manager</key>
+	<true/>
+
+	<!--
+	 刻意不申请：
+	   com.apple.private.security.storage.AppBundles     ← 改其他 App 的包（注入用）
+	   com.apple.private.security.storage.AppDataContainers
+	   task_for_pid-allow                                ← 读写任意进程内存
+	   run-unsigned-code
+	   get-task-allow
+	   com.apple.developer.driverkit
+	   com.apple.security.iokit-user-client-class (AGX/IOHDIX/IOSurface)
+	   com.apple.developer.networking.networkextension / vpn.api
+	   com.apple.developer.networking.HotspotHelper
+	 原则：只保留"改自己的定位"所必需的最小集合。
+	-->
+</dict>
+</plist>

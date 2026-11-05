@@ -1,0 +1,54 @@
+name: Xloc
+options:
+  bundleIdPrefix: com.onshine
+  deploymentTarget:
+    iOS: "15.0"
+  createIntermediateGroups: true
+  xcodeVersion: "15.0"
+
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    IPHONEOS_DEPLOYMENT_TARGET: "15.0"
+    TARGETED_DEVICE_FAMILY: "1"
+    CODE_SIGN_IDENTITY: ""
+    CODE_SIGNING_REQUIRED: "NO"
+    CODE_SIGNING_ALLOWED: "NO"
+    ENABLE_BITCODE: "NO"
+
+targets:
+  Xloc:
+    type: application
+    platform: iOS
+    sources:
+      - path: Xloc
+        excludes:
+          - "Info.plist"
+          - "Xloc.entitlements"
+          - "Bridge/PrivateHeaders.h"
+          - "Bridge/Xloc-Bridging-Header.h"
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.onshine.xloc
+        PRODUCT_NAME: Xloc
+        INFOPLIST_FILE: Xloc/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Xloc/Xloc.entitlements
+        SWIFT_OBJC_BRIDGING_HEADER: Xloc/Bridge/Xloc-Bridging-Header.h
+        OTHER_LDFLAGS: "-framework CoreLocation -framework SystemConfiguration -framework MapKit -framework Security"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+
+  XlocTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - Tests
+    dependencies:
+      - target: Xloc
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.onshine.xloc.tests
+        GENERATE_INFOPLIST_FILE: "YES"
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Xloc.app/Xloc"
+        BUNDLE_LOADER: "$(TEST_HOST)"

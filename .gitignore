@@ -1,0 +1,15 @@
+# Xcode
+build/
+DerivedData/
+*.xcuserstate
+*.xcworkspace/xcuserdata/
+xcuserdata/
+*.ipa
+*.tipa
+*.app/
+Payload/
+.DS_Store
+
+# 分析/临时产物
+*.log
+/tmp/
