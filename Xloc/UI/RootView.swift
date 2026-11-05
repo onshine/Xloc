@@ -131,7 +131,7 @@ struct SettingsScreen: View {
                 } header: {
                     Text("设备")
                 } footer: {
-                    Text("UID 存在 Keychain 里，卸载重装不变，用于定位问题。报障时把它一起发过来。")
+                    Text("UID 存在 App 容器之外（/var/mobile/Library/Preferences/），卸载重装不变。报障时把它一起发过来。")
                 }
 
                 Section {

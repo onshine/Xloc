@@ -126,14 +126,21 @@ com.apple.SystemConfiguration.SCDynamicStore-write-access
 com.apple.developer.networking.wifi-info               ← 读当前 SSID/BSSID
 com.apple.security.exception.files.absolute-path.read-write
     /private/var/preferences/SystemConfiguration/      ← 只给这一个目录
+com.apple.security.iokit-user-client-class
+    AGXDeviceUserClient / IOSurfaceRootUserClient      ← GPU 渲染（见下）
 ```
+
+> **关于 GPU 权限**：`platform-application` 让 App 跑在 platform 沙盒配置下，
+> 不显式声明这两个 user client 就拿不到 GPU 与 IOSurface——
+> 表现是 `MKMapView` 一片空白、键盘毛玻璃背景在 CoreImage 里直接 SIGSEGV。
+> 这是"最小权限"唯一必须让步的地方。
 
 **刻意没有申请**：
 
 ```
 task_for_pid-allow / run-unsigned-code / get-task-allow   ← 能读写任意进程内存
 com.apple.private.security.storage.AppBundles             ← 能改别的 App 的包（注入）
-com.apple.developer.driverkit / AGXDeviceUserClient       ← 驱动 / GPU
+com.apple.developer.driverkit                             ← 驱动
 networkextension / vpn.api / HotspotHelper                ← 网络扩展
 ```
 

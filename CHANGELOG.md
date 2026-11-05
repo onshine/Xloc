@@ -1,5 +1,17 @@
 # 更新日志
 
+## v0.1.3
+
+### 修复
+
+- **地图空白 + 键盘弹出闪退（同一根因）**：`platform-application` 下没有 GPU 的
+  IOKit user client，`MKMapView` 拿不到渲染表面（空白），键盘毛玻璃背景在 CoreImage
+  里 SIGSEGV。补回 `AGXDeviceUserClient` 与 `IOSurfaceRootUserClient`。
+- **UID 每次启动都变**：Keychain 在 fakesign 应用里会返回 -34018（缺少
+  application-identifier），写入失败后每次生成新 ID。改为存到 App 容器之外
+  `/var/mobile/Library/Preferences/com.onshine.xloc.uid.plist`，卸载重装不变。
+
+
 ## v0.1.2
 
 ### 新增

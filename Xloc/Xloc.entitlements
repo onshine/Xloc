@@ -11,6 +11,16 @@
 	<key>com.apple.locationd.simulation</key>
 	<true/>
 
+	<!-- GPU / 图面渲染。
+	     platform-application 跑的是 platform 沙盒配置，不显式给这几个 user client
+	     就拿不到 GPU 与 IOSurface：MKMapView 会一片空白，键盘毛玻璃背景会直接
+	     在 CoreImage 里 SIGSEGV。这是"最小权限"唯一必须让步的地方。 -->
+	<key>com.apple.security.iokit-user-client-class</key>
+	<array>
+		<string>AGXDeviceUserClient</string>
+		<string>IOSurfaceRootUserClient</string>
+	</array>
+
 	<!-- 访问 SystemConfiguration（Wi-Fi 指纹） -->
 	<key>com.apple.private.security.no-sandbox</key>
 	<true/>
