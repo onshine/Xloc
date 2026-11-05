@@ -1,5 +1,23 @@
 # 更新日志
 
+## v0.2.0
+
+### 新增：单 App 注入（B 方案）
+
+- 新增 **App** 标签页：枚举已安装应用、搜索、一键生成注入版安装包
+- 新增 `XlocPlugin`：注入到目标 App 内的钩子，替换 `CLLocationManager`
+  的定位入口，在进程内构造 `CLLocation` —— 这种对象没有 `sourceInformation`，
+  目标 App 读 `isSimulatedBySoftware` 得到的是 `nil`
+- 新增 `MachOInjector`：在 Mach-O 头部空白处插入 `LC_LOAD_DYLIB`，不移动任何 section
+- 新增 `ZipWriter`：纯 Swift 的最小 ZIP 写入器，用于生成 `.tipa`
+- entitlements 增加 `AppBundles` / `AppDataContainers`
+
+### 说明
+
+- 系统通道（`CLSimulationManager`）依然保留，适合"全设备生效、不需要隐蔽"的场景
+- 注入模式每次换坐标需重新生成安装包，详见 `Docs/INJECTION.md`
+
+
 ## v0.1.3
 
 ### 修复

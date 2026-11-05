@@ -32,7 +32,13 @@
 	<key>com.apple.developer.networking.wifi-info</key>
 	<true/>
 
-	<!-- 读取已安装 App 列表（按 App 配置预设，非注入） -->
+	<!-- 读写其它 App 的包与容器：生成注入版安装包时需要 -->
+	<key>com.apple.private.security.storage.AppBundles</key>
+	<true/>
+	<key>com.apple.private.security.storage.AppDataContainers</key>
+	<true/>
+
+	<!-- 读取已安装 App 列表 -->
 	<key>com.apple.private.coreservices.canmaplsdatabase</key>
 	<true/>
 
