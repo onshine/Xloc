@@ -32,16 +32,6 @@
 	<key>com.apple.developer.networking.wifi-info</key>
 	<true/>
 
-	<!-- 读写其它 App 的包与容器：生成注入版安装包时需要 -->
-	<key>com.apple.private.security.storage.AppBundles</key>
-	<true/>
-	<key>com.apple.private.security.storage.AppDataContainers</key>
-	<true/>
-
-	<!-- 读取已安装 App 列表 -->
-	<key>com.apple.private.coreservices.canmaplsdatabase</key>
-	<true/>
-
 	<!-- 只允许写 SystemConfiguration 目录，而不是像某些项目那样给整个 "/" -->
 	<key>com.apple.security.exception.files.absolute-path.read-write</key>
 	<array>
@@ -55,8 +45,9 @@
 
 	<!--
 	 刻意不申请：
-	   com.apple.private.security.storage.AppBundles     ← 改其他 App 的包（注入用）
+	   com.apple.private.security.storage.AppBundles     ← 读写别的 App 的包
 	   com.apple.private.security.storage.AppDataContainers
+	   com.apple.private.coreservices.canmaplsdatabase
 	   task_for_pid-allow                                ← 读写任意进程内存
 	   run-unsigned-code
 	   get-task-allow

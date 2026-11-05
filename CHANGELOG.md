@@ -1,5 +1,10 @@
 # 更新日志
 
+## v0.2.3
+
+- 收回上一版为改包功能申请的三项权限：`AppBundles`、`AppDataContainers`、
+  `canmaplsdatabase`。现在只剩 8 项，都是定位 / 渲染 / Wi-Fi 直接需要的。
+
 ## v0.2.2
 
 ### 新增
