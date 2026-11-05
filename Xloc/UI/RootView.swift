@@ -1,6 +1,7 @@
 // Xloc — RootView.swift
 
 import SwiftUI
+import UIKit
 import CoreLocation
 
 struct RootView: View {
@@ -89,11 +90,50 @@ struct SettingsScreen: View {
     @EnvironmentObject var engine: SimulationEngine
     @EnvironmentObject var locationAuth: LocationAuthorizer
 
+    @ObservedObject private var reporter = CrashReporter.shared
     @State private var diagnostics: [DiagnosticItem] = []
+    @State private var uidCopied = false
 
     var body: some View {
         NavigationView {
             Form {
+                Section {
+                    HStack(alignment: .center, spacing: 10) {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("设备 UID").font(.subheadline.weight(.medium))
+                            Text(DeviceIdentity.prettyUID)
+                                .font(.caption.monospaced())
+                                .foregroundStyle(.secondary)
+                                .textSelection(.enabled)
+                        }
+                        Spacer()
+                        Button {
+                            UIPasteboard.general.string = DeviceIdentity.uid
+                            uidCopied = true
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { uidCopied = false }
+                        } label: {
+                            Image(systemName: uidCopied ? "checkmark.circle.fill" : "doc.on.doc")
+                                .font(.title3)
+                        }
+                        .buttonStyle(.borderless)
+                    }
+                    .padding(.vertical, 2)
+
+                    NavigationLink(destination: CrashLogsView()) {
+                        HStack {
+                            Text("崩溃日志")
+                            Spacer()
+                            Text("\(reporter.logs.count)")
+                                .font(.caption.monospacedDigit())
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                } header: {
+                    Text("设备")
+                } footer: {
+                    Text("UID 存在 Keychain 里，卸载重装不变，用于定位问题。报障时把它一起发过来。")
+                }
+
                 Section {
                     if let loc = locationAuth.lastLocation {
                         row("坐标", String(format: "%.6f, %.6f", loc.coordinate.latitude, loc.coordinate.longitude))

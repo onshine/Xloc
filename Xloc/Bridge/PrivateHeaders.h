@@ -21,6 +21,10 @@ typedef NS_ENUM(uint8_t, CLSimulationLocationDeliveryBehavior) {
     CLSimulationDeliveryRoute = 1,   // 沿追加的点顺序播放
 };
 
+/// 安装信号级崩溃处理器（实现在 CrashHandler.c）。
+/// 崩溃发生时把栈追加到 path，下次启动由 Swift 侧改名归档。
+void xloc_install_crash_handler(const char * _Nonnull path);
+
 /// 检查当前进程是否持有某个 entitlement。
 /// SecTask API 不公开且 CFTypeRef 跨语言导入容易出歧义，这里包成 BOOL。
 BOOL XLHasEntitlement(CFStringRef _Nonnull key);

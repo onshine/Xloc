@@ -8,6 +8,11 @@ struct XlocApp: App {
     @StateObject private var engine = SimulationEngine.shared
     @StateObject private var locationAuth = LocationAuthorizer()
 
+    init() {
+        // 越早越好：在 SwiftUI 构建视图之前就装上
+        CrashReporter.shared.install()
+    }
+
     var body: some Scene {
         WindowGroup {
             RootView()
