@@ -85,12 +85,27 @@ jobs:
 
       - name: Verify entitlements
         run: |
-          BIN="${{ steps.app.outputs.path }}/$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "${{ steps.app.outputs.path }}/Info.plist")"
+          APP="${{ steps.app.outputs.path }}"
+          BIN="$APP/$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$APP/Info.plist")"
           echo "== 签名信息 =="
           codesign -dvvv "$BIN" 2>&1 | sed -n '1,12p' || true
+
+          ENT=/tmp/ent.plist
+          : > "$ENT"
+          # ldid 写进去的签名，codesign 有时读不出 entitlements，优先用 ldid 读
+          if command -v ldid >/dev/null 2>&1; then
+            ldid -e "$BIN" > "$ENT" 2>/dev/null || true
+          fi
+          if ! grep -q "locationd.simulation" "$ENT" 2>/dev/null; then
+            codesign -d --entitlements :- "$BIN" > "$ENT" 2>/dev/null || true
+          fi
+          if ! grep -q "locationd.simulation" "$ENT" 2>/dev/null; then
+            codesign -d --entitlements - "$BIN" > "$ENT" 2>&1 || true
+          fi
+
           echo "== entitlements =="
-          codesign -d --entitlements :- "$BIN" 2>/dev/null | tee /tmp/ent.plist || true
-          grep -q "com.apple.locationd.simulation" /tmp/ent.plist \
+          cat "$ENT"
+          grep -q "com.apple.locationd.simulation" "$ENT" \
             || { echo "::error::entitlements 里没有 locationd.simulation，安装后无法模拟定位"; exit 1; }
 
       - name: Generate changelog
